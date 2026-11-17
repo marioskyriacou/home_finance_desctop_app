@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select
 
 from .schemas import Token, UserOut, ItemOut, ItemCreate
-from .security import get_current_user, verify_password
+from .security import get_current_user, verify_password, create_access_token
 from .database import Base, engine, get_db
 from .models import User, Item
 
@@ -38,16 +38,16 @@ def login(form: Annotated[OAuth2PasswordRequestForm, Depends()], db:DbSession):
 			status_code=status.HTTP_401_UNAUTHORIZED,
 			detail="Incorrect username or password")
 
-	return Token(access_token=user.access_token)
+	return Token(access_token=create_access_token(user.username))
 
 @app.get("/auth/me", response_model=UserOut)
 def me(user:CurrentUser):
 	return user
 
-@app.get("items", response_model=list[ItemOut])
+@app.get("/items", response_model=list[ItemOut])
 def list_items(user:CurrentUser, db:DbSession):
 	stmt = select(Item).where(Item.owner_id == user.id).order_by(Item.id.desc())
-	return db.scalar(stmt).all()
+	return db.scalars(stmt).all()
 
 
 @app.post("/items", response_model=ItemOut, status_code=status.HTTP_201_CREATED)
